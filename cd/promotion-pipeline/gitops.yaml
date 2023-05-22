@@ -1,0 +1,235 @@
+version: '1.0'
+kind: pipeline
+metadata:
+  name: Continuous Deployment/gitops-promotion
+  project: Continuous Deployment
+  projectId: 6452ba7594cae677bbe5ddf3
+  revision: 13
+  accountId: 64515228ef68b36109127c87
+  created_at: '2023-05-03T21:27:21.245Z'
+  updated_at: '2023-05-05T22:34:45.957Z'
+  shortName: gitops-promotion
+  deprecate: {}
+  labels:
+    tags:
+      - cd
+  originalYamlString: |+
+    # More examples of Codefresh YAML can be found at
+    # https://codefresh.io/docs/docs/yaml-examples/examples/
+
+    version: "1.0"
+    # Stages can help you organize your steps in stages
+    stages:
+      - "clone"
+      - "build"
+      - "test"
+
+    steps:
+      clone:
+        title: "Cloning repository"
+        type: "git-clone"
+        repo: "https://github.com/codefresh-io/cli/"
+        # Clone the master branch. Or, use ${{CF_BRANCH}} to get branch name from trigger
+        # Learn more at https://codefresh.io/docs/docs/codefresh-yaml/variables/
+        revision: "master"
+        stage: "clone"
+
+      build:
+        title: "Building Docker image"
+        type: "build"
+        image_name: "codefresh-io/cli"
+        working_directory: "${{clone}}"
+        # Set 'latest' tag on the image. Or, use built-in variables
+        # like ${{CF_BRANCH_TAG_NORMALIZED}} to use the current branch name/tag.
+        tag: "latest"
+        dockerfile: "Dockerfile"
+        stage: "build"
+
+      test:
+        title: "Running test"
+        type: "freestyle" # Run any command
+        image: "ubuntu:latest" # The image in which command will be executed
+        working_directory: "${{clone}}" # Running command where code cloned
+        commands:
+          - "ls"
+        stage: "test"
+
+  id: 6452d1b963c68da3a0357674
+spec:
+  triggers:
+    - name: flask-ui-pr-merge
+      type: git
+      repo: povadmin-45cbc49/flask-ui
+      events:
+        - pullrequest.merged
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /.*/gi
+      branchRegexInput: regex
+      pullRequestTargetBranchRegex: /main/g
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables:
+        - key: TARGET_REPO
+          value: app-configs
+        - key: TARGET_FILE
+          value: development/kustomize/overlays/flask-ui/kustomization.yaml
+        - key: TARGET_FILE_IMAGE_TAG_PLACEMENT
+          value: '.images.[0].newTag'
+      status: verified
+      lastExecutionDate: '2023-05-09T15:27:11.797Z'
+      id: 6455655508a684f757df7e7d
+      endpoint: 'https://g.codefresh.io/api/providers/github/hook/6KxxcDnpgh'
+      secret: **************
+    - name: express-pr-merge
+      type: git
+      repo: povadmin-45cbc49/express
+      events:
+        - pullrequest.merged
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /.*/gi
+      branchRegexInput: regex
+      pullRequestTargetBranchRegex: /main/g
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables:
+        - key: TARGET_REPO
+          value: app-configs
+        - key: TARGET_FILE
+          value: development/kustomize/overlays/express/kustomization.yaml
+        - key: TARGET_FILE_IMAGE_TAG_PLACEMENT
+          value: '.images.[0].newTag'
+      status: verified
+      lastExecutionDate: '2023-05-08T19:46:11.608Z'
+      id: 645565d0ed07f321c1db8cdc
+      endpoint: 'https://g.codefresh.io/api/providers/github/hook/h5AahBC6Gk'
+      secret: **************
+    - name: express-promote-dev-to-prod
+      type: git
+      repo: povadmin-45cbc49/app-configs
+      events:
+        - push.heads
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /main/gi
+      branchRegexInput: regex
+      modifiedFilesGlob: development/kustomize/overlays/express/kustomization.yaml
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables:
+        - key: SOURCE_REPO
+          value: app-configs
+        - key: SOURCE_FILE
+          value: development/kustomize/overlays/express/kustomization.yaml
+        - key: SOURCE_FILE_IMAGE_TAG_PLACEMENT
+          value: '.images.[0].newTag'
+        - key: TARGET_REPO
+          value: app-configs
+        - key: TARGET_FILE
+          value: production/kustomize/overlays/express/kustomization.yaml
+        - key: TARGET_FILE_IMAGE_TAG_PLACEMENT
+          value: '.images.[0].newTag'
+      status: verified
+      lastExecutionDate: '2023-05-08T19:50:10.125Z'
+      id: 6455679008a6842056df7e8b
+      endpoint: 'https://g.codefresh.io/api/providers/github/hook/XDo23jLFns'
+      secret: **************
+    - name: flask-ui-promote-dev-to-prod
+      type: git
+      repo: povadmin-45cbc49/app-configs
+      events:
+        - push.heads
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /main/gi
+      branchRegexInput: regex
+      modifiedFilesGlob: development/kustomize/overlays/flask-ui/kustomization.yaml
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables:
+        - key: SOURCE_FILE
+          value: development/kustomize/overlays/flask-ui/kustomization.yaml
+        - key: SOURCE_REPO
+          value: app-configs
+        - key: SOURCE_FILE_IMAGE_TAG_PLACEMENT
+          value: '.images.[0].newTag'
+        - key: TARGET_FILE_IMAGE_TAG_PLACEMENT
+          value: '.images.[0].newTag'
+        - key: TARGET_REPO
+          value: app-configs
+        - key: TARGET_FILE
+          value: production/kustomize/overlays/flask-ui/kustomization.yaml
+      status: verified
+      lastExecutionDate: '2023-05-09T15:31:21.536Z'
+      id: 64556850ed07f3eb2fdb8ce8
+      endpoint: 'https://g.codefresh.io/api/providers/github/hook/XDo23jLFns'
+      secret: **************
+  permitRestartFromFailedSteps: true
+  clustersInfo:
+    injectAll: true
+    clusters: []
+  variables: []
+  contexts: []
+  specTemplate:
+    location: git
+    repo: povadmin-45cbc49/codefresh-pipelines
+    path: ./cd/gitops-promotion.yaml
+    revision: main
+    context: github
+  stages: []
+  terminationPolicy: []
+  externalResources: []
+  concurrency: 1
+  steps:
+    clone:
+      title: Cloning repository
+      type: git-clone
+      repo: 'https://github.com/codefresh-io/cli/'
+      revision: master
+      stage: clone
+    build:
+      title: Building Docker image
+      type: build
+      image_name: codefresh-io/cli
+      working_directory: '${{clone}}'
+      tag: latest
+      dockerfile: Dockerfile
+      stage: build
+    test:
+      title: Running test
+      type: freestyle
+      image: 'ubuntu:latest'
+      working_directory: '${{clone}}'
+      commands:
+        - ls
+      stage: test
+
