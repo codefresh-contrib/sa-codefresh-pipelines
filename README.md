@@ -14,8 +14,17 @@ These projects could be separate GIT repositories or a mono repository.
 
 The example though is based on a separate GIT repository for each microservice.
 
-The file ./ci/golden-pipeline/microservice.yaml is full pipeline specification which is made up of both [GIT Triggers](https://codefresh.io/docs/docs/pipelines/triggers/git-triggers/) and [Codefresh Steps]()https://codefresh.io/docs/docs/pipelines/steps/.
+The file ./ci/golden-pipeline/microservice.yaml is full pipeline specification which is made up of both [GIT Triggers](https://codefresh.io/docs/docs/pipelines/triggers/git-triggers/) and [Codefresh Steps](https://codefresh.io/docs/docs/pipelines/steps/).
 
 GIT triggers allow the user to associate the Codefresh pipeline with multiple GIT repositories or a single GIT repository with directory/path based microservices.
 
-You will find the steps located under 
+You will find the steps located under .spec.steps these steps can be stored inline in the full specification but can also be stored in another file or another GIT repository using .specTemplate
+
+```
+  specTemplate:
+    location: git
+    repo: <org>/<repo>
+    path: ./<directory>/<file>
+    revision: <branch>
+    context: <git integration context>
+```
