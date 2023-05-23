@@ -25,10 +25,10 @@ You will find the steps located under `.spec.steps` these steps can be stored in
 ```yaml
   specTemplate:
     location: git
-    repo: <org>/<repo>
+    repo: <org name>/<repo name>
     path: ./<directory>/<file>
     revision: <branch>
-    context: <git integration context>
+    context: <GIT Pipeline Integration Name>
 ```
 
 This pipeline will contain the steps for Continuous Integration.
@@ -44,3 +44,27 @@ After you've setup the pipeline to meet your CI requirements for microservices.
 The next step is to add consumers to use this pipeline.
 
 Each microservice should be a separate trigger entity under `.spec.triggers.[]` array.
+
+In this pipeline 2 such triggers exist.  
+
+More can be added by adding into the array.
+
+You can also control these externally as separate triggers and combine them through GIT contributions and a Codefresh Pipeline w/ Codefresh Marketplace Step [pipeline-trigger-merge](https://codefresh.io/steps/step/pipeline-trigger-merge)
+
+Each trigger is setup to build on commit push, pull request open and pull request synchronize.
+
+The CI pipeline is simplified into 4 steps.
+1. [clone](https://codefresh.io/steps/step/git-clone) # Clones source code from GIT repository identified in trigger
+1. [build](https://codefresh.io/steps/step/build) # Builds and pushes image to artifact repository
+1. [test](https://codefresh.io/steps/step/freestyle) # Runs image as container
+1. [report](https://codefresh.io/steps/step/codefresh-report-image) # Reports image to Codefresh
+
+To utilize the final step in CI you will need to [install a Codefresh GitOps Runtime](https://codefresh.io/docs/docs/installation/gitops/)
+
+More about GitOps Promotions will be covered by the next section of the README.md
+
+Now that you have some information about purpose behind the pipelines you can copy over the files in `./ci/golden-pipelines` and make edits to use them on your Codefresh Account.
+
+You will find in both files `<` and `>` symbols indicating those symbols should be replaced by the value of the source/key between the symbols.
+
+In many cases the values will be found by locating the friendly names of the Pipeline Integrations and by the GIT VCS derived data.
