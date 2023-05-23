@@ -44,6 +44,8 @@ steps:
     type: codefresh-report-image
     working_directory: /code
     arguments:
+      # Note: To obtain a Codefresh API key, please refer to the documentation at:
+      # https://codefresh.io/docs/docs/integrations/codefresh-api/#authentication-instructions
       CF_API_KEY: ${{CF_API_KEY}}
       CF_IMAGE: <Image Registry Domain>/${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}:${{CF_BRANCH_TAG_NORMALIZED_LOWER}}-${{CF_REVISION}}
       CF_CONTAINER_REGISTRY_INTEGRATION: <Image Registry Integration Name>
@@ -54,3 +56,7 @@ steps:
       CF_JIRA_MESSAGE: ${{CF_BRANCH}}
       CF_JIRA_PROJECT_PREFIX: <JIRA Project Prefix>
     stage: report
+
+# Make sure to replace the placeholder values enclosed in '<>' with actual values specific to your environment and integrations.
+# For detailed information about Codefresh pipeline configuration, please refer to the documentation at: 
+# https://codefresh.io/docs/docs/configure-ci-cd-pipeline/pipelines/#pipeline-structure
