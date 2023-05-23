@@ -1,0 +1,167 @@
+version: '1.0'
+kind: pipeline
+metadata:
+  name: canary-incremental-approval
+  shortName: canary-incremental-approval
+  deprecate: {}
+spec:
+  triggers:
+    - name: dev-canary
+      type: git
+      repo: <github org name>/codefreshdemo-dev-manifests
+      events:
+        - push.heads
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /main/gi
+      branchRegexInput: regex
+      modifiedFilesGlob: kustomize/express-canary/**
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: <GIT Pipeline Integration Name>
+      contexts: []
+      variables: []
+  stages:
+    - check canary
+    - canary 5%
+    - canary 50%
+    - finalize
+  variables: []
+  contexts: []
+  clustersInfo:
+    injectAll: true
+  debug:
+    steps:
+      check_canary_has_started:
+        phases:
+          before: false
+          override: true
+          after: false
+  steps:
+    check_canary_has_started:
+      title: Checking Canary has Started...
+      stage: check canary
+      image: 'quay.io/argoproj/kubectl-argo-rollouts:latest'
+      commands:
+        - >-
+          /bin/kubectl-argo-rollouts get rollout express-microservice -n
+          istio-development --context codefreshdemo | grep Step | grep 1
+      retry:
+        maxAttempts: 5
+        delay: 5
+        exponentialFactor: 2
+    check_canary_5:
+      fail_fast: false
+      type: pending-approval
+      title: Is canary ok?
+      stage: canary 5%
+    promote_canary_50:
+      title: Switching 50% traffic to canary
+      stage: canary 50%
+      image: 'quay.io/argoproj/kubectl-argo-rollouts:latest'
+      commands:
+        - >-
+          /bin/kubectl-argo-rollouts promote express-microservice -n
+          istio-development --context codefreshdemo
+      when:
+        steps:
+          - name: check_canary_5
+            'on':
+              - approved
+    abort_deployment_5:
+      title: Discarding canary at 5%
+      stage: canary 5%
+      image: 'quay.io/argoproj/kubectl-argo-rollouts:latest'
+      commands:
+        - >-
+          /bin/kubectl-argo-rollouts abort express-microservice -n
+          istio-development --context codefreshdemo
+      when:
+        steps:
+          - name: check_canary_5
+            'on':
+              - denied
+    exit_5:
+      title: Stopping pipeline
+      stage: canary 5%
+      image: 'alpine:39'
+      commands:
+        - echo "Canary failed"
+        - exit 1
+      when:
+        steps:
+          - name: check_canary_5
+            'on':
+              - denied
+    check_canary_50:
+      fail_fast: false
+      type: pending-approval
+      title: Is canary ok?
+      stage: canary 50%
+    promote_canary_full:
+      title: Switching all traffic to canary
+      stage: finalize
+      image: 'quay.io/argoproj/kubectl-argo-rollouts:latest'
+      commands:
+        - >-
+          /bin/kubectl-argo-rollouts promote express-microservice --full -n
+          istio-development --context codefreshdemo
+      when:
+        steps:
+          - name: check_canary_50
+            'on':
+              - approved
+    abort_deployment_50:
+      title: Discarding canary at 50%
+      stage: canary 50%
+      image: 'quay.io/argoproj/kubectl-argo-rollouts:latest'
+      commands:
+        - >-
+          /bin/kubectl-argo-rollouts abort express-microservice -n
+          istio-development --context codefreshdemo
+      when:
+        steps:
+          - name: check_canary_50
+            'on':
+              - denied
+    exit_50:
+      title: Stopping pipeline
+      stage: canary 50%
+      image: 'alpine:39'
+      commands:
+        - echo "Canary failed"
+        - exit 1
+      when:
+        steps:
+          - name: check_canary_50
+            'on':
+              - denied
+  hooks:
+    on_elected:
+      exec:
+        image: quay.io/codefresh/cli
+        shell: bash
+        commands:
+          - >-
+            export BUILD_STRATEGY=$(curl -X GET -H "Authorization:
+            ${{CF_API_KEY}}" "${{CF_URL}}/api/builds/${{CF_BUILD_ID}}" | jq -r
+            '.buildStrategy')
+
+            echo $BUILD_STRATEGY    
+
+            if [ "$BUILD_STRATEGY" == "restart-failed-steps" ] ; then
+                echo "Restarting from Failed Steps is NOT Permitted by Policy"
+                exit 1
+            fi
+          - >-
+            codefresh get builds --pipeline-name=${{CF_PIPELINE_NAME}} -o json |
+            jq -c '[ .[] | select( .status | contains("pending-approval")) |
+            select( .["pipeline-trigger-id"] |
+            contains("${{CF_PIPELINE_TRIGGER_ID}}")) | .id ]' |  jq -c '.[]' |
+            xargs -n 1 codefresh terminate || echo "No Pending Builds Found."
+
