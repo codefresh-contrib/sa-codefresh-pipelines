@@ -9,7 +9,7 @@ metadata:
       - ci
 spec:
   triggers:
-    - nname: <microservice-a repo name>
+    - name: <microservice-a repo name>
       type: git
       repo: <github org name>/<microservice-a repo name>
       events:
@@ -67,3 +67,20 @@ spec:
   terminationPolicy: []
   externalResources: []
   steps: {}
+
+# Note for new adopters:
+# - Replace the placeholders enclosed in '<>' with actual values specific to your environment and repositories.
+# - Ensure that you have the necessary permissions and integrations set up in Codefresh.
+# - Familiarize yourself with the full pipeline specification documentation at:
+#   https://codefresh.io/docs/docs/integrations/codefresh-api/#full-pipeline-specification
+
+# Additional information:
+# - Triggers define events that can trigger pipeline runs, such as push or pull request events.
+# - Each trigger specifies the repository, events, and integration details for the source control provider.
+# - The permitRestartFromFailedSteps property allows restarting the pipeline from a failed step instead of rerunning the entire pipeline.
+# - The specTemplate section specifies the location and revision of the template file used for the pipeline.
+# - The stages array allows organizing pipeline steps into stages for better visualization and control.
+# - The variables and contexts sections can be used to define environment variables and context variables used in the pipeline.
+# - The terminationPolicy array allows defining termination policies for the pipeline.
+# - The externalResources array can be used to define external resources needed for the pipeline, such as databases or services.
+# - The steps section contains the actual steps of the pipeline. Currently empty, it can be populated with specific steps based on your requirements.
