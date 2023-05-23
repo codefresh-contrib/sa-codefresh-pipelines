@@ -1,0 +1,56 @@
+version: '1.0'
+
+stages:
+  - clone
+  - build
+  - test
+  - report
+
+steps:
+  clone:
+    title: Cloning repository
+    type: git-clone
+    repo: ${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}
+    revision: ${{CF_REVISION}}
+    stage: clone
+
+  build:
+    title: Building Docker image
+    type: build
+    image_name: ${{REPO_OWNER}}/${{CF_REPO_NAME}}
+    working_directory: ${{clone}}
+    tag: ${{CF_BRANCH_TAG_NORMALIZED}}-${{CF_REVISION}}
+    dockerfile: Dockerfile
+    stage: build
+
+  test:
+    title: Starting container using built image
+    type: freestyle
+    image: ${{build}}
+    commands:
+      - echo "Container Running, no tests to run."
+    stage: test
+
+  convert_branch_to_lower:
+    title: Converting branch to lower case
+    type: freestyle
+    image: alpine
+    commands:
+      - cf_export CF_BRANCH_TAG_NORMALIZED_LOWER=$(echo "${{CF_BRANCH_TAG_NORMALIZED}}" | awk '{print tolower($0)}')
+    stage: report
+
+  report:
+    title: Report image for GitOps
+    type: codefresh-report-image
+    working_directory: /code
+    arguments:
+      CF_API_KEY: ${{CF_API_KEY}}
+      CF_IMAGE: <Image Registry Domain>/${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}:${{CF_BRANCH_TAG_NORMALIZED_LOWER}}-${{CF_REVISION}}
+      CF_CONTAINER_REGISTRY_INTEGRATION: <Image Registry Integration Name>
+      CF_RUNTIME_NAME: <Codefresh GitOps Runtime Name>
+      CF_GIT_REPO: ${{CF_REPO_OWNER}}/${{CF_REPO_NAME}}
+      CF_GIT_BRANCH: ${{CF_BRANCH}}
+      CF_ISSUE_TRACKING_INTEGRATION: <JIRA Integration Name>
+      CF_JIRA_MESSAGE: ${{CF_BRANCH}}
+      CF_JIRA_PROJECT_PREFIX: <JIRA Project Prefix>
+    stage: report

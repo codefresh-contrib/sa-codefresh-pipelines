@@ -1,0 +1,69 @@
+version: '1.0'
+kind: pipeline
+metadata:
+  name: microservices
+  shortName: microservices
+  deprecate: {}
+  labels:
+    tags:
+      - ci
+spec:
+  triggers:
+    - nname: <microservice-a repo name>
+      type: git
+      repo: <org name>/<microservice-a repo name>
+      events:
+        - push.heads
+        - pullrequest.opened
+        - pullrequest.synchronize
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /^((?!main)).*/gi
+      branchRegexInput: regex
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables: []
+    - name: <microservice-b repo name>
+      type: git
+      repo: <org name>/<microservice-b repo name>
+      events:
+        - push.heads
+        - pullrequest.opened
+        - pullrequest.synchronize
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /^((?!main)).*/gi
+      branchRegexInput: regex
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables: []
+  permitRestartFromFailedSteps: true
+  clustersInfo:
+    injectAll: true
+    clusters: []
+  variables: []
+  contexts: []
+  specTemplate:
+    location: git
+    repo: <org name>/<pipelines repo>
+    path: ./ci/golden-pipeline/microservices-codefresh.yaml
+    revision: main
+    context: github
+  stages: []
+  terminationPolicy: []
+  externalResources: []
+  steps: {}
