@@ -1,0 +1,125 @@
+version: '1.0'
+
+hooks:
+  on_elected:
+    exec:
+      image: quay.io/codefresh/cli
+      shell: bash
+      commands:
+        - |-
+          export BUILD_STRATEGY=$(curl -X GET -H "Authorization: ${{CF_API_KEY}}" "${{CF_URL}}/api/builds/${{CF_BUILD_ID}}" | jq -r '.buildStrategy')
+          echo $BUILD_STRATEGY    
+          if [ "$BUILD_STRATEGY" == "restart-failed-steps" ] ; then
+              echo "Restarting from Failed Steps is NOT Permitted by Policy"
+              exit 1
+          fi
+        - codefresh get builds --pipeline-name="${{CF_PIPELINE_NAME}}" -o json | jq -c '[ .[] | select( .status | contains("pending-approval")) | select( .["pipeline-trigger-id"] | contains("${{CF_PIPELINE_TRIGGER_ID}}")) | .id ]' |  jq -c '.[]' | xargs -n 1 codefresh terminate || echo "No Pending Builds Found."
+
+stages:
+  - clone
+  - report_update_plan
+  - wait_for_approval
+  - promote_candidate
+
+steps:
+  clone_source_repo:
+    title: Cloning Source Repository
+    type: git-clone
+    repo: ${{CF_REPO_OWNER}}/${{SOURCE_REPO}}
+    revision: main
+    stage: clone
+    when:
+      condition:
+        all:
+          SourceRepoExists: 'includes("${{SOURCE_REPO}}", "{{SOURCE_REPO}}") == false'
+
+  clone_target_repo:
+    title: Cloning Target Repository
+    type: git-clone
+    repo: ${{CF_REPO_OWNER}}/${{TARGET_REPO}}
+    revision: main
+    stage: clone  
+
+  determine_candidate_source:
+    title: Determining Candidate Source
+    type: freestyle
+    image: quay.io/codefresh/cli
+    shell: bash
+    commands:
+      - |-
+        if [ "$SOURCE_FILE" ] ; then
+            cf_export CANDIDATE_SOURCE=$SOURCE_FILE
+        else
+            cf_export CANDIDATE_IMAGE_TAG=$(echo "$CF_PULL_REQUEST_HEAD_BRANCH-$CF_PULL_REQUEST_HEAD_COMMIT_SHA" | awk '{print tolower($0)}')
+        fi
+    stage: report_update_plan
+
+  fetch_candidate_image_tag:
+    title: Fetching Candidate Image Tag
+    type: freestyle
+    image: mikefarah/yq:4
+    working_directory: ${{clone_source_repo}}
+    commands:
+      - cf_export CANDIDATE_IMAGE_TAG=$(cat ${{CANDIDATE_SOURCE}} | yq ${{SOURCE_FILE_IMAGE_TAG_PLACEMENT}} | awk '{print tolower($0)}')
+    stage: report_update_plan
+    when:
+      condition:
+        all:
+          SourceRepoExists: 'includes("${{SOURCE_REPO}}", "{{SOURCE_REPO}}") == false'
+
+  report_planned_candidate_updates:
+    title: Report Release Candidate
+    type: freestyle
+    image: mikefarah/yq:4
+    working_directory: ${{clone_target_repo}}
+    commands:
+      - echo "Before Changes"
+      - cat ${{TARGET_FILE}}
+      - yq -i '${{TARGET_FILE_IMAGE_TAG_PLACEMENT}} = "${{CANDIDATE_IMAGE_TAG}}"' ${{TARGET_FILE}}
+      - echo "After Changes"
+      - cat ${{TARGET_FILE}}
+    stage: report_update_plan
+    on_success:
+      annotations:
+        set:
+          - annotations:
+            - candidate_image_tag: ${{CANDIDATE_IMAGE_TAG}}
+
+  wait_for_approval:
+    title: Review Candidate Report and Approve Update Plan for Release.
+    type: pending-approval
+    stage: wait_for_approval
+
+  fetch_candidate:
+    title: Fetch Release Candidate
+    type: freestyle
+    image: quay.io/codefresh/cli
+    working_directory: ${{clone_target_repo}}
+    commands:
+      - cf_export CANDIDATE_IMAGE_TAG=$(codefresh get annotation build ${{CF_BUILD_ID}} candidate_image_tag -o json | jq -r '.value')
+    stage: promote_candidate
+
+  update_target_environment:
+    title: Update Target Environment
+    type: freestyle
+    image: mikefarah/yq:4
+    working_directory: ${{clone_target_repo}}
+    commands:
+      - echo "Before Changes"
+      - cat ${{TARGET_FILE}}
+      - yq -i '${{TARGET_FILE_IMAGE_TAG_PLACEMENT}} = "${{CANDIDATE_IMAGE_TAG}}"' ${{TARGET_FILE}}
+      - echo "After Changes"
+      - cat ${{TARGET_FILE}}
+    stage: promote_candidate
+
+  commit_and_push:
+    title: Commit manifest
+    type: git-commit
+    arguments:
+      repo: ${{CF_REPO_OWNER}}/${{TARGET_REPO}}
+      git: <GIT Pipeline Integration Name>
+      working_directory: '/codefresh/volume/${{TARGET_REPO}}'
+      commit_message: Committed Promotion Candidate ${{CANDIDATE_IMAGE_TAG}} to ${{TARGET_FILE}}
+      git_user_name: <git user name>
+      git_user_email: <git user email>
+    stage: promote_candidate

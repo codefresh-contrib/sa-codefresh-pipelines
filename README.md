@@ -22,7 +22,7 @@ To utilize these in your account you will need to configure a [GIT provider pipe
 
 You will find the steps located under `.spec.steps` these steps can be stored inline in the full specification but can also be stored in another file or another GIT repository using `.spec.specTemplate`
 
-```
+```yaml
   specTemplate:
     location: git
     repo: <org>/<repo>

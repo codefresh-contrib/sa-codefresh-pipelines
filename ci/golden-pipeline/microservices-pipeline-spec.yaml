@@ -11,7 +11,7 @@ spec:
   triggers:
     - nname: <microservice-a repo name>
       type: git
-      repo: <org name>/<microservice-a repo name>
+      repo: <github org name>/<microservice-a repo name>
       events:
         - push.heads
         - pullrequest.opened
@@ -27,12 +27,12 @@ spec:
         noCfCache: false
         resetVolume: false
       verified: true
-      context: github
+      context: <GIT Pipeline Integration Name>
       contexts: []
       variables: []
     - name: <microservice-b repo name>
       type: git
-      repo: <org name>/<microservice-b repo name>
+      repo: <github org name>/<microservice-b repo name>
       events:
         - push.heads
         - pullrequest.opened
@@ -48,7 +48,7 @@ spec:
         noCfCache: false
         resetVolume: false
       verified: true
-      context: github
+      context: <GIT Pipeline Integration Name>
       contexts: []
       variables: []
   permitRestartFromFailedSteps: true
@@ -59,10 +59,10 @@ spec:
   contexts: []
   specTemplate:
     location: git
-    repo: <org name>/<pipelines repo>
+    repo: <github org name>/<pipelines repo>
     path: ./ci/golden-pipeline/microservices-codefresh.yaml
     revision: main
-    context: github
+    context: <GIT Pipeline Integration Name>
   stages: []
   terminationPolicy: []
   externalResources: []
