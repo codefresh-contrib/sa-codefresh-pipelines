@@ -68,3 +68,30 @@ Now that you have some information about purpose behind the pipelines you can co
 You will find in both files `<` and `>` symbols indicating those symbols should be replaced by the value of the source/key between the symbols.
 
 In many cases the values will be found by locating the friendly names of the Pipeline Integrations and by the GIT VCS derived data.
+
+## Shared CI Pipeline (Terraform Edition)
+
+As an alternative method we support Terraform.
+
+[Codefresh Terraform Provider](https://registry.terraform.io/providers/codefresh-io/codefresh/latest)
+
+This same Golden Pipeline example has Terraform files found in the terraform folder.
+
+Run Terraform Init from ./ci/golden-pipeline/terraform to get Codefresh provider.
+
+``` shell
+terraform init
+```
+
+See all variables in vars.tf
+
+Example Plan:
+
+``` shell
+terraform plan -v cf_api_token="<my_codefresh_api_token>" -v git_repo_owner=<my_git_organization>"
+```
+
+Example Apply:
+``` shell
+terraform apply -v cf_api_token="<my_codefresh_api_token>" -v git_repo_owner=<my_git_organization>"
+```
