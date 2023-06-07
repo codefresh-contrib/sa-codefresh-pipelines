@@ -1,0 +1,69 @@
+version: '1.0'
+kind: pipeline
+metadata:
+  name: Continuous Integration/microservices
+  project: Continuous Integration
+  shortName: microservices
+  deprecate: {}
+  labels:
+    tags:
+      - ci
+spec:
+  triggers:
+    - name: express
+      type: git
+      repo: povadmin-45cbc49/express
+      events:
+        - push.heads
+        - pullrequest.opened
+        - pullrequest.synchronize
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /^((?!main)).*/gi
+      branchRegexInput: regex
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables: []
+    - name: flask-ui
+      type: git
+      repo: povadmin-45cbc49/flask-ui
+      events:
+        - push.heads
+        - pullrequest.opened
+        - pullrequest.synchronize
+      pullRequestAllowForkEvents: false
+      commentRegex: /.*/gi
+      branchRegex: /^((?!main)).*/gi
+      branchRegexInput: regex
+      provider: github
+      disabled: false
+      options:
+        noCache: false
+        noCfCache: false
+        resetVolume: false
+      verified: true
+      context: github
+      contexts: []
+      variables: []
+  permitRestartFromFailedSteps: true
+  clustersInfo:
+    injectAll: true
+    clusters: []
+  variables: []
+  contexts: []
+  specTemplate:
+    location: git
+    repo: povadmin-45cbc49/codefresh-pipelines
+    path: ./ci/microservices.yaml
+    revision: main
+    context: github
+  stages: []
+  terminationPolicy: []
+  externalResources: []
