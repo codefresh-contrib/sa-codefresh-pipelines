@@ -117,7 +117,6 @@ variable "cf_volume" {
 
 variable "cf_container_volume_mount" {
   type = string
-  default = "/codefres/volume
+  default = "/codefres/volume"
   description = "Codefresh CLI Container Volume Mount Path"
 }
-

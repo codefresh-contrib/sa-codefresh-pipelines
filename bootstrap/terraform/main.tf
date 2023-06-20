@@ -22,11 +22,6 @@ provider "aws" {
   }
 }
 
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "19.15.3"
-}
-
 provider "docker" {
   host = "unix:///var/run/docker.sock"
 }

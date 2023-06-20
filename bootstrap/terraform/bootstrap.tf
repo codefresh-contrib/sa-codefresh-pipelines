@@ -37,7 +37,7 @@ module "eks" {
     }
   }
 
-  tags = ${var.eks_mng_tags}
+  tags = var.eks_mng_tags
 }
 
 # Create GitOps Runtime
@@ -71,8 +71,8 @@ resource "docker_container" "codefresh" {
   image = var.cf_cli_image
   env = ["CF_API_HOST=${var.cf_api_host}", "CF_API_TOKEN=${var.cf_api_token}"]
   volumes {
-    host_path = ${path.module}
-    container_path = ${path.module}
+    host_path = path.module
+    container_path = path.module
   }
   command = ["codefresh runner init", "--generate-helm-values-file"]
 }
@@ -85,7 +85,7 @@ resource "helm_release" "cf_runtime" {
   chart      = "cf-runtime"
 
   values = [
-    file("${path.module}/generated-values.yaml")
+    file("${path.module}/generated-values.yaml"),
     file("${path.module}/cf-runtime-values.yaml")
   ]
 }
