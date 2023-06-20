@@ -18,7 +18,7 @@ variable "aws_role_arn" {
 
 variable "eks_cluster_name" {
   type = string
-  default = "us-east-1"
+  default = "terraform-demo"
   description = "Name for EKS cluster"
 }
 

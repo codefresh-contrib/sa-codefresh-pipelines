@@ -40,15 +40,17 @@ module "eks" {
   tags = var.eks_mng_tags
 }
 
+
+
 # Create GitOps Runtime
 
 provider "helm" {
   kubernetes {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", data.aws_eks_cluster.cluster.name]
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_endpoint]
       command     = "aws"
     }
   }
@@ -71,8 +73,8 @@ resource "docker_container" "codefresh" {
   image = var.cf_cli_image
   env = ["CF_API_HOST=${var.cf_api_host}", "CF_API_TOKEN=${var.cf_api_token}"]
   volumes {
-    host_path = path.module
-    container_path = path.module
+    host_path = "/codefresh/volume"
+    container_path = "/codefresh/volume"
   }
   command = ["codefresh runner init", "--generate-helm-values-file"]
 }
