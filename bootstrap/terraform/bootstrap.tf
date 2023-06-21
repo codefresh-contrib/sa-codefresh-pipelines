@@ -6,20 +6,12 @@ module "eks" {
 
   cluster_name    = "${var.eks_cluster_name}"
   cluster_version = "${var.eks_cluster_version}"
+  cluster_encryption_config = {}
 
   cluster_endpoint_public_access  = true
-
-  cluster_addons = {
-    coredns = {
-      most_recent = true
-    }
-    kube-proxy = {
-      most_recent = true
-    }
-    vpc-cni = {
-      most_recent = true
-    }
-  }
+  cluster_endpoint_public_access_cidrs = [
+    "0.0.0.0/0"
+  ]
 
   vpc_id                   = "${var.eks_vpc_id}"
   subnet_ids               = var.eks_subnet_ids
@@ -40,29 +32,70 @@ module "eks" {
   tags = var.eks_mng_tags
 }
 
+# Create KubeConfig
 
+data "aws_eks_cluster_auth" current {
+  name = module.eks.cluster_name
+}
+
+locals {
+  kubeconfig = <<-EOT
+    apiVersion: v1
+    clusters:
+    - cluster:
+        server: ${module.eks.cluster_endpoint}
+        certificate-authority-data: ${module.eks.cluster_certificate_authority_data}
+      name: ${module.eks.cluster_name}
+    contexts:
+    - context:
+        cluster: ${module.eks.cluster_name}
+        user: ${module.eks.cluster_name}
+      name: ${module.eks.cluster_name}
+    current-context: ${module.eks.cluster_name}
+    kind: Config
+    preferences: {}
+    users:
+    - name: ${module.eks.cluster_name}
+      user:
+        token: ${nonsensitive(data.aws_eks_cluster_auth.current.token)}
+  EOT
+}
+
+resource "local_file" "temp_config" {
+  filename  = var.kubeconfig_name
+  content   = local.kubeconfig
+}
 
 # Create GitOps Runtime
-
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_endpoint]
-      command     = "aws"
-    }
-  }
-}
 
 resource "helm_release" "gitops-runtime" {
   name       = "gitops-runtime"
   repository = "https://chartmuseum.codefresh.io/gitops-runtime"
   chart      = "gitops-runtime"
+  devel      = "true"
+  namespace  = "codefresh"
+  create_namespace = "true"
 
   values = [
     file("${path.module}/gitops-runtime-values.yaml")
+  ]
+
+  set {
+    name  = "global.codefresh.accountId"
+    value = var.cf_account_id
+  }
+
+  set {
+    name  = "global.codefresh.userToken.token"
+    value = var.cf_api_token
+  }
+
+  set {
+    name  = "global.runtime.name"
+    value = module.eks.cluster_name
+  }
+  depends_on = [
+    module.eks
   ]
 }
 
@@ -71,23 +104,43 @@ resource "helm_release" "gitops-runtime" {
 resource "docker_container" "codefresh" {
   name  = "codefresh"
   image = var.cf_cli_image
-  env = ["CF_API_HOST=${var.cf_api_host}", "CF_API_TOKEN=${var.cf_api_token}"]
+  env = ["CF_API_HOST=${var.cf_api_host}", "CF_API_KEY=${var.cf_api_token}", "KUBECONFIG=/codefresh/volume/${var.kubeconfig_name}", "CF_ARG_KUBE_NAMESPACE=${var.cf_runtime_namespace}"]
   volumes {
-    host_path = "/codefresh/volume"
+    host_path = "/Users/dustinvanbuskirk/src/codefresh-contrib/sa-codefresh-pipelines/bootstrap/terraform"
     container_path = "/codefresh/volume"
   }
-  command = ["codefresh runner init", "--generate-helm-values-file"]
+  working_dir = "/codefresh/volume"
+  command = ["runner", "init", "--generate-helm-values-file", "--yes"]
+  attach = "true"
+  must_run = "false"
 }
 
-# Create Codefresh Runner
+# Create Codefresh Runtime
 
 resource "helm_release" "cf_runtime" {
   name       = "cf-runtime"
   repository = "https://chartmuseum.codefresh.io/cf-runtime"
   chart      = "cf-runtime"
+  namespace  = "codefresh"
+  create_namespace = "true"
 
   values = [
-    file("${path.module}/generated-values.yaml"),
+    file("${path.module}/generated_values.yaml"),
     file("${path.module}/cf-runtime-values.yaml")
   ]
+
+  set {
+    name  = "global.runtimeNname"
+    value = module.eks.cluster_name
+  }
+  depends_on = [
+    docker_container.codefresh
+  ]
+  lifecycle {
+    ignore_changes = [
+      # Ignore changes to tags, e.g. because a management agent
+      # updates these based on some ruleset managed elsewhere.
+      values,
+    ]
+  }
 }

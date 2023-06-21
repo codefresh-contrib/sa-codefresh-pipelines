@@ -24,7 +24,7 @@ variable "eks_cluster_name" {
 
 variable "eks_cluster_version" {
   type = string
-  default = "1.27"
+  default = "1.24"
   description = "EKS Cluster Version"
 }
 # Documentation: https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html
@@ -53,25 +53,25 @@ variable "eks_mng_instance_types" {
 
 variable "eks_mng_min_size" {
   type = number
-  default = 1
+  default = 3
   description = "Minimum EKS Managed Node Group size"
 }
 
 variable "eks_mng_max_size" {
   type = number
-  default = 2
+  default = 5
   description = "Maximum EKS Managed Node Group size"
 }
 
 variable "eks_mng_desired_size" {
   type = number
-  default = 1
+  default = 3
   description = "Desired EKS Managed Node Group size"
 }
 
 variable "eks_mng_capacity_type" {
   type = string
-  default = "SPOT"
+  default = "ON_DEMAND"
   description = "EKS Managed Node Group CapacityType"
 }
 # Documentation: https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html
@@ -82,7 +82,23 @@ variable "eks_mng_tags" {
   description = "EKS Managed Node Group CapacityType"
 }
 
+#### Local KubeConfig
+
+variable "kubeconfig_name" {
+  type = string
+  default = "temp_config.yaml"
+  description = "Name of KubeConfig"
+}
+
 #### Codefresh Configuration
+
+variable "cf_account_id" {
+  type    = string
+  default = ""
+  sensitive = true
+  description = "Codefresh Account ID"
+}
+# Contact Codefresh to obtain
 
 variable "cf_api_host" {
   type = string
@@ -106,17 +122,8 @@ variable "cf_cli_image" {
 }
 # Documentation: https://quay.io/repository/codefresh/cli
 
-#Unused
-
-variable "cf_volume" {
+variable "cf_runtime_namespace" {
   type = string
-  default = "/codefresh/volume"
-  description = "Codefresh Volume Mount Path"
-}
-# Documentation: https://codefresh.io/docs/docs/pipelines/introduction-to-codefresh-pipelines/#sharing-the-workspace-between-build-steps
-
-variable "cf_container_volume_mount" {
-  type = string
-  default = "/codefres/volume"
-  description = "Codefresh CLI Container Volume Mount Path"
+  default = "codefresh"
+  description = "Codefresh Runtime installation namespace"
 }
